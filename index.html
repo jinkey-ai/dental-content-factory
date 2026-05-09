@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dental Content Factory</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --indigo: #4F46E5;
+    --indigo-dark: #4338CA;
+    --indigo-light: #EEF2FF;
+    --green: #059669;
+    --green-light: #ECFDF5;
+    --red: #DC2626;
+    --red-light: #FEF2F2;
+    --amber: #D97706;
+    --amber-light: #FFFBEB;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  .login-card {
+    background: #fff; border-radius: 16px; padding: 2.5rem; text-align: center;
+    width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .login-logo { font-size: 2.5rem; margin-bottom: .75rem; }
+  .login-title { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: .25rem; }
+  .login-sub { font-size: 13.5px; color: var(--gray-500); margin-bottom: 2rem; }
+  .login-status { font-size: 13px; margin-top: 1rem; padding: .6rem 1rem; border-radius: 8px; display: none; }
+  .login-status.pending { background: var(--amber-light); color: var(--amber); }
+  .login-status.rejected { background: var(--red-light); color: var(--red); }
+  .login-status.disabled { background: var(--red-light); color: var(--red); }
+
+  /* ── APP SHELL ── */
+  #app-screen { min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar {
+    background: #fff; border-bottom: 1px solid var(--gray-200);
+    padding: .75rem 1.5rem; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
+  }
+  .topbar-logo { font-size: 1.25rem; }
+  .topbar-title { font-size: 15px; font-weight: 700; color: var(--gray-900); flex: 1; }
+  .topbar-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; background: var(--indigo-light); color: var(--indigo);
+  }
+  .topbar-badge.admin { background: #FEF3C7; color: #92400E; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--gray-200); cursor: pointer;
+  }
+  .avatar-placeholder {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--indigo);
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dropdown { position: relative; }
+  .dropdown-menu {
+    position: absolute; right: 0; top: calc(100% + 8px);
+    background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius);
+    box-shadow: var(--shadow-md); min-width: 180px; overflow: hidden; display: none; z-index: 200;
+  }
+  .dropdown-menu.open { display: block; }
+  .dropdown-item {
+    padding: .6rem 1rem; font-size: 13.5px; color: var(--gray-700); cursor: pointer;
+    transition: background .1s;
+  }
+  .dropdown-item:hover { background: var(--gray-50); }
+  .dropdown-item.danger { color: var(--red); }
+
+  .app-body { flex: 1; max-width: 860px; margin: 0 auto; padding: 1.5rem; width: 100%; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 4px; margin-bottom: 1.25rem; }
+  .tab-btn { flex: 1; padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--gray-500); transition: .15s; white-space: nowrap; }
+  .tab-btn.active { background: var(--indigo); color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── CARDS ── */
+  .card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 1.25rem; margin-bottom: .875rem; }
+  .card-title { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .875rem; }
+
+  /* ── FORM ── */
+  label { font-size: 13px; color: var(--gray-700); display: block; margin-bottom: 4px; margin-top: .75rem; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; background: #fff; color: var(--gray-900);
+    transition: border-color .15s; outline: none; line-height: 1.5;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--indigo); }
+  textarea { resize: vertical; }
+  .hint { font-size: 11.5px; color: var(--gray-400); margin-top: 3px; line-height: 1.5; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: .75rem 0; border-top: 1px solid var(--gray-100); margin-top: .75rem; }
+  .toggle-label { font-size: 14px; color: var(--gray-700); font-weight: 500; }
+  .toggle-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .toggle { width: 44px; height: 24px; background: var(--gray-200); border-radius: 20px; position: relative; cursor: pointer; transition: background .2s; border: none; flex-shrink: 0; }
+  .toggle.on { background: var(--indigo); }
+  .toggle::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left .2s; }
+  .toggle.on::after { left: 23px; }
+
+  /* ── BUTTONS ── */
+  .btn { padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; transition: .15s; }
+  .btn-primary { background: var(--indigo); color: #fff; }
+  .btn-primary:hover { background: var(--indigo-dark); }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-outline { background: #fff; color: var(--indigo); border: 1.5px solid var(--indigo); }
+  .btn-outline:hover { background: var(--indigo-light); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid #FECACA; }
+  .btn-danger:hover { background: #FEE2E2; }
+  .btn-success { background: var(--green-light); color: var(--green); border: 1px solid #A7F3D0; }
+  .btn-success:hover { background: #D1FAE5; }
+  .btn-full { width: 100%; display: block; text-align: center; }
+
+  /* ── PROGRESS ── */
+  .progress-wrap { display: none; margin: .75rem 0; }
+  .progress-bar { height: 5px; background: var(--indigo-light); border-radius: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; background: var(--indigo); transition: width .5s ease; border-radius: 5px; }
+  .progress-msg { font-size: 12.5px; color: var(--gray-500); margin-top: .35rem; text-align: center; }
+
+  /* ── ALERTS ── */
+  .alert { border-radius: 8px; padding: .65rem 1rem; font-size: 13px; margin-bottom: .75rem; line-height: 1.5; }
+  .alert-ok { background: var(--green-light); color: #065F46; border: 1px solid #A7F3D0; }
+  .alert-warn { background: var(--amber-light); color: #92400E; border: 1px solid #FCD34D; }
+  .alert-err { background: var(--red-light); color: #991B1B; border: 1px solid #FECACA; }
+  .alert-info { background: var(--indigo-light); color: #3730A3; border: 1px solid #C7D2FE; }
+
+  /* ── RULE CARDS ── */
+  .rule-card { border: 1.5px solid var(--gray-200); border-radius: var(--radius); padding: 1rem; margin-bottom: .6rem; transition: border-color .2s; }
+  .rule-card:focus-within { border-color: var(--indigo); }
+  .rule-header { display: flex; align-items: center; gap: 10px; margin-bottom: .75rem; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .b1 { background: var(--indigo-light); color: #3730A3; }
+  .b2 { background: var(--green-light); color: #065F46; }
+  .b3 { background: #FFF7ED; color: #9A3412; }
+  .rule-name-input { flex: 1; border: none; border-bottom: 1.5px solid var(--gray-200); font-size: 14px; font-weight: 600; background: transparent; color: var(--gray-900); outline: none; padding: 2px 0; transition: border-color .15s; }
+  .rule-name-input:focus { border-color: var(--indigo); }
+
+  /* ── OUTPUT CARDS ── */
+  .out-card { border: 1.5px solid var(--gray-200); border-radius: var(--radius); padding: 1rem; margin-bottom: .6rem; }
+  .out-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+  .out-text { font-size: 13.5px; line-height: 1.75; color: var(--gray-900); white-space: pre-wrap; word-break: break-word; }
+  .caption-box { background: var(--indigo-light); border: 1px solid #C7D2FE; border-radius: 8px; padding: .75rem 1rem; margin-bottom: .75rem; }
+  .caption-label { font-size: 11px; font-weight: 700; color: #3730A3; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+  .caption-text { font-size: 13px; color: #3730A3; line-height: 1.6; }
+
+  /* ── ADMIN TABLE ── */
+  .user-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .user-table th { text-align: left; padding: .6rem .875rem; font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--gray-200); }
+  .user-table td { padding: .75rem .875rem; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .user-table tr:last-child td { border-bottom: none; }
+  .status-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .s-approved { background: var(--green-light); color: #065F46; }
+  .s-pending { background: var(--amber-light); color: #92400E; }
+  .s-rejected { background: var(--red-light); color: #991B1B; }
+  .s-disabled { background: var(--gray-100); color: var(--gray-500); }
+  .action-row { display: flex; gap: 6px; }
+
+  /* ── HISTORY ── */
+  .log-item { border: 1px solid var(--gray-200); border-radius: 8px; padding: .875rem; margin-bottom: .5rem; }
+  .log-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
+  .log-time { font-size: 12px; color: var(--gray-400); }
+  .log-link { font-size: 12px; color: var(--indigo); text-decoration: none; }
+  .log-desc { font-size: 13px; color: var(--gray-700); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* ── PENDING BADGE ── */
+  .pending-dot { width: 8px; height: 8px; background: var(--red); border-radius: 50%; display: inline-block; margin-left: 4px; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 2.5rem 1rem; color: var(--gray-400); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+  .empty-text { font-size: 13.5px; }
+
+  /* ── LOADING ── */
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">⚡</div>
+    <h1 class="login-title">Dental Content Factory</h1>
+    <p class="login-sub">Đăng nhập để tạo content nha khoa tự động</p>
+    <div id="google-signin-btn"></div>
+    <div id="login-status" class="login-status"></div>
+  </div>
+</div>
+
+<!-- ══ APP SCREEN ════════════════════════════════════════════ -->
+<div id="app-screen" class="screen">
+  <!-- Topbar -->
+  <div class="topbar">
+    <span class="topbar-logo">⚡</span>
+    <span class="topbar-title">Dental Content Factory</span>
+    <span id="role-badge" class="topbar-badge">Nhân viên</span>
+    <div class="dropdown">
+      <img id="user-avatar" class="avatar" src="" alt="" onerror="this.style.display='none';document.getElementById('avatar-placeholder').style.display='flex'" />
+      <div id="avatar-placeholder" class="avatar-placeholder" style="display:none">U</div>
+      <div class="dropdown-menu" id="user-menu">
+        <div class="dropdown-item" id="user-name-item" style="font-weight:600;color:var(--gray-900)">...</div>
+        <div class="dropdown-item" id="user-email-item" style="color:var(--gray-400);font-size:12px">...</div>
+        <hr style="border:none;border-top:1px solid var(--gray-100)">
+        <div class="dropdown-item danger" onclick="logout()">Đăng xuất</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App body -->
+  <div class="app-body">
+    <!-- Tabs (nhân viên) -->
+    <div id="user-tabs" class="tabs">
+      <button class="tab-btn active" onclick="switchTab('create')">✦ Tạo content</button>
+      <button class="tab-btn" onclick="switchTab('rules')">⚙ Rule của tôi</button>
+      <button class="tab-btn" onclick="switchTab('sheet')">🔗 Kết nối Sheet</button>
+      <button class="tab-btn" onclick="switchTab('history')">📋 Lịch sử</button>
+    </div>
+
+    <!-- Tabs (admin — hidden by default) -->
+    <div id="admin-tabs" class="tabs" style="display:none">
+      <button class="tab-btn active" onclick="switchAdminTab('create')">✦ Tạo content</button>
+      <button class="tab-btn" onclick="switchAdminTab('rules')">⚙ Rule của tôi</button>
+      <button class="tab-btn" onclick="switchAdminTab('sheet')">🔗 Sheet</button>
+      <button class="tab-btn" onclick="switchAdminTab('history')">📋 Lịch sử</button>
+      <button class="tab-btn" id="admin-users-btn" onclick="switchAdminTab('users')">👥 Users <span id="pending-dot" class="pending-dot" style="display:none"></span></button>
+    </div>
+
+    <!-- ── TAB: CREATE ── -->
+    <div id="tab-create" class="tab-content active">
+      <div class="card">
+        <div class="card-title">Thông tin media</div>
+        <label>Google Drive link</label>
+        <input type="text" id="drive-link" placeholder="https://drive.google.com/file/d/... hoặc /folders/..." />
+        <p class="hint">⚑ Link phải ở chế độ "Anyone with the link can view"</p>
+
+        <div id="caption-area" style="display:none;margin-top:.875rem">
+          <div class="caption-box">
+            <div class="caption-label">✦ Gemini đã đọc ảnh — mô tả tự động</div>
+            <div class="caption-text" id="caption-text"></div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="toggleEditDesc()" id="edit-desc-btn">✏ Sửa mô tả</button>
+        </div>
+
+        <div id="desc-area">
+          <label id="desc-label">Mô tả media <span style="color:#ccc;font-size:12px">(hoặc nhập Drive link ở trên để auto-caption)</span></label>
+          <textarea id="media-desc" style="min-height:80px" placeholder="VD: Ảnh before/after của KH nữ 22 tuổi, niềng Invisalign 10 tháng...&#10;Hoặc nhập Drive link để Gemini tự mô tả."></textarea>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="gen-progress">
+        <div class="progress-bar"><div class="progress-fill" id="gen-fill"></div></div>
+        <div class="progress-msg" id="gen-msg"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:.875rem">
+        <button class="btn btn-outline" style="flex:1" id="caption-btn" onclick="runCaption()">🔍 Auto-caption ảnh</button>
+        <button class="btn btn-primary" style="flex:2" id="gen-btn" onclick="runGeneration()">✦ Tạo 3 content</button>
+      </div>
+
+      <div id="gen-alert"></div>
+      <div id="output-area" style="display:none">
+        <div id="outputs"></div>
+        <button class="btn btn-outline btn-full" onclick="copyAll()" style="margin-top:.25rem">📋 Copy tất cả 3 content</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: RULES ── -->
+    <div id="tab-rules" class="tab-content">
+      <div class="card">
+        <div class="card-title">3 Rule content — của bạn, riêng bạn</div>
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:1rem;line-height:1.6">Rule này chỉ áp dụng cho tài khoản của bạn. Mô tả cấu trúc, tone, độ dài càng cụ thể thì content càng chuẩn.</p>
+        <div id="rules-editor"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:.625rem">
+          <button class="btn btn-primary" onclick="saveRules()">Lưu rule</button>
+          <button class="btn btn-sm" style="border:1px solid var(--gray-200);background:#fff;color:var(--gray-500);cursor:pointer" onclick="resetRules()">Reset mặc định</button>
+          <span id="rules-save-status" style="font-size:12px;color:var(--green);display:none">✓ Đã lưu</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: SHEET ── -->
+    <div id="tab-sheet" class="tab-content">
+      <div class="card">
+        <div class="card-title">Kết nối Google Sheet</div>
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:.875rem;line-height:1.6">Mỗi lần tạo content, kết quả sẽ tự động ghi vào Sheet của bạn nếu bật tính năng này.</p>
+
+        <div class="toggle-row" style="margin-top:0;padding-top:0;border-top:none">
+          <div>
+            <div class="toggle-label">Tự động ghi vào Sheet</div>
+            <div class="toggle-sub" id="sheet-toggle-sub">Đang tắt</div>
+          </div>
+          <button class="toggle" id="sheet-toggle" onclick="toggleSheet()"></button>
+        </div>
+
+        <div id="sheet-config-form">
+          <label>Sheet ID <span style="color:var(--gray-400)">(từ URL: /spreadsheets/d/<strong>ID</strong>/edit)</span></label>
+          <input type="text" id="sheet-id-input" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgm..." />
+
+          <label>Apps Script URL của Sheet <span style="color:var(--gray-400)">(deploy riêng trên sheet của bạn)</span></label>
+          <input type="text" id="sheet-script-url" placeholder="https://script.google.com/macros/s/.../exec" />
+          <p class="hint">📄 Xem file <strong>UserSheet.gs</strong> trong package để deploy. Cần làm 1 lần duy nhất.</p>
+
+          <button class="btn btn-primary" style="margin-top:.875rem" onclick="saveSheetConfig()">Lưu cấu hình</button>
+          <span id="sheet-save-status" style="font-size:12px;color:var(--green);margin-left:10px;display:none">✓ Đã lưu</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: HISTORY ── -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div class="card-title">Lịch sử tạo content</div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ADMIN USERS ── -->
+    <div id="tab-users" class="tab-content" style="display:none">
+      <div class="card" id="pending-card" style="display:none">
+        <div class="card-title">Chờ duyệt <span id="pending-count" style="background:var(--red);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:4px">0</span></div>
+        <div id="pending-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tất cả users</div>
+        <div id="all-users-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CONFIG ════════════════════════════════════════════════════
+const GOOGLE_CLIENT_ID = "1045491840462-d72hd2pkj1svafm7ksog9i9ejudmddag.apps.googleusercontent.com"; // Thay bằng Client ID thật
+const API_URL = "https://script.google.com/macros/s/AKfycbyutRJDjSIXdde772MDrYYRjzxraE2XmklaI7HlDMYIYDSvHI3LUQWQE45wGDbVBzF2yg/exec"; // Thay bằng Apps Script Web App URL
+const GEMINI_KEY = "AIzaSyBbzIL0cb5byh9Dd9HAv9vZ--gVxDKm_vk"; // Thay bằng Gemini API Key
+
+const DEFAULT_RULES = [
+  { badge:"Rule 1", cls:"b1", name:"Hook Pain Point → Giải pháp → CTA", prompt:`Viết content Facebook Ads theo cấu trúc PAIN HOOK:\n- Hook (dòng 1-2): Câu chạm đúng nỗi đau (mất tự tin, ngại cười, ảnh hưởng công việc...)\n- Agitate (dòng 3-4): Khắc sâu vấn đề\n- Giải pháp (dòng 5-7): Giới thiệu niềng răng, nhấn kết quả cụ thể\n- Social proof + urgency ngắn\n- CTA cuối rõ ràng, không áp lực\nTone: gần gũi, đồng cảm, ngôi "bạn". Tối đa 160 từ. Emoji ≤3.` },
+  { badge:"Rule 2", cls:"b2", name:"Social Proof → Kết quả → Offer", prompt:`Viết content Facebook Ads theo cấu trúc SOCIAL PROOF:\n- Mở bằng con số hoặc trích dẫn tạo tin cậy ngay\n- Hành trình/kết quả cụ thể: [ban đầu] → [sau niềng]\n- Mô tả tự nhiên những gì thấy trong ảnh/video\n- Offer/giá/ưu đãi nếu có\n- CTA: nhắn tin hoặc comment\nTone: chân thực, đáng tin, có cảm xúc. Tối đa 180 từ.` },
+  { badge:"Rule 3", cls:"b3", name:"Before/After → Transformation → Trust", prompt:`Viết content Facebook Ads theo cấu trúc TRANSFORMATION:\n- Hook: Tương phản mạnh trước/sau\n- Storytelling 3-4 câu cảm xúc thật\n- Mô tả cụ thể hình ảnh/video đính kèm\n- Trust signals: năm kinh nghiệm, số KH, công nghệ\n- CTA nhẹ nhàng: "Nhắn tin để được tư vấn miễn phí"\nTone: cảm hứng, ấm áp. Tối đa 170 từ.` }
+];
+
+// ══ STATE ═════════════════════════════════════════════════════
+let STATE = { token: null, user: null, isAdmin: false, rules: null, sheetConfig: null, captionText: "", lastContents: ["","",""], editingDesc: false };
+
+function ls(k,v) { if(v===undefined) { try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;} } else { localStorage.setItem(k,JSON.stringify(v)); } }
+
+// ══ INIT ══════════════════════════════════════════════════════
+window.addEventListener("load", () => {
+  // Try restore session
+  const saved = ls("dcf_session");
+  if (saved && saved.token) {
+    STATE.token = saved.token;
+    STATE.user = saved.user;
+    STATE.isAdmin = saved.isAdmin;
+    initApp();
+  } else {
+    initGoogleLogin();
+  }
+});
+
+function initGoogleLogin() {
+  showScreen("login");
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleLogin,
+    auto_select: false
+  });
+  google.accounts.id.renderButton(
+    document.getElementById("google-signin-btn"),
+    { theme: "outline", size: "large", width: 280, text: "signin_with" }
+  );
+}
+
+async function handleGoogleLogin(response) {
+  const payload = parseJwt(response.credential);
+  const result = await api({ action:"registerOrLogin", email:payload.email, name:payload.name, avatar:payload.picture });
+  if (!result.ok) { showLoginStatus("err", "Lỗi kết nối. Thử lại."); return; }
+
+  if (result.status === "pending")  { showLoginStatus("pending", result.message); return; }
+  if (result.status === "rejected") { showLoginStatus("rejected", result.message); return; }
+  if (result.status === "disabled") { showLoginStatus("disabled", result.message); return; }
+
+  STATE.token = result.token;
+  STATE.user = { email: payload.email, name: payload.name, avatar: payload.picture };
+  STATE.isAdmin = result.isAdmin;
+  ls("dcf_session", { token: STATE.token, user: STATE.user, isAdmin: STATE.isAdmin });
+  initApp();
+}
+
+function showLoginStatus(type, msg) {
+  const el = document.getElementById("login-status");
+  el.className = "login-status " + type;
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+async function initApp() {
+  showScreen("app");
+
+  // Topbar
+  document.getElementById("user-avatar").src = STATE.user.avatar || "";
+  const ph = document.getElementById("avatar-placeholder");
+  ph.textContent = (STATE.user.name || "U")[0].toUpperCase();
+  document.getElementById("user-name-item").textContent = STATE.user.name;
+  document.getElementById("user-email-item").textContent = STATE.user.email;
+
+  if (STATE.isAdmin) {
+    document.getElementById("role-badge").textContent = "Admin";
+    document.getElementById("role-badge").classList.add("admin");
+    document.getElementById("user-tabs").style.display = "none";
+    document.getElementById("admin-tabs").style.display = "flex";
+    loadPendingBadge();
+  }
+
+  // Avatar dropdown
+  document.getElementById("user-avatar").addEventListener("click", toggleDropdown);
+  document.getElementById("avatar-placeholder").addEventListener("click", toggleDropdown);
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".dropdown")) document.getElementById("user-menu").classList.remove("open");
+  });
+
+  await loadRules();
+  await loadSheetConfig();
+  renderRulesEditor();
+  loadHistory();
+}
+
+function logout() {
+  localStorage.removeItem("dcf_session");
+  STATE = { token:null, user:null, isAdmin:false, rules:null, sheetConfig:null, captionText:"", lastContents:["","",""], editingDesc:false };
+  google.accounts.id.disableAutoSelect();
+  showScreen("login");
+  initGoogleLogin();
+}
+
+// ══ TABS ══════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll("#user-tabs .tab-btn").forEach((b,i)=>b.classList.toggle("active",["create","rules","sheet","history"][i]===name));
+  ["create","rules","sheet","history"].forEach(t=>{
+    const el = document.getElementById("tab-"+t);
+    if(el) el.classList.toggle("active", t===name);
+  });
+  document.getElementById("tab-users").style.display="none";
+  if(name==="history") loadHistory();
+}
+function switchAdminTab(name) {
+  document.querySelectorAll("#admin-tabs .tab-btn").forEach((b,i)=>b.classList.toggle("active",["create","rules","sheet","history","users"][i]===name));
+  ["create","rules","sheet","history"].forEach(t=>{
+    const el=document.getElementById("tab-"+t);
+    if(el) el.classList.toggle("active",t===name);
+  });
+  const usersEl = document.getElementById("tab-users");
+  usersEl.style.display = name==="users"?"block":"none";
+  if(name==="users") loadAdminUsers();
+  if(name==="history") loadHistory();
+}
+
+// ══ RULES ═════════════════════════════════════════════════════
+async function loadRules() {
+  const res = await api({ action:"getRules" });
+  STATE.rules = (res.ok && res.rules) ? res.rules : JSON.parse(JSON.stringify(DEFAULT_RULES));
+}
+function renderRulesEditor() {
+  document.getElementById("rules-editor").innerHTML = STATE.rules.map((r,i)=>`
+    <div class="rule-card">
+      <div class="rule-header">
+        <span class="badge ${r.cls}">${r.badge}</span>
+        <input class="rule-name-input" id="rn-${i}" value="${esc(r.name)}" placeholder="Tên rule..." />
+      </div>
+      <label style="font-size:12px;color:var(--gray-400);margin-bottom:4px">Hướng dẫn AI viết theo rule này:</label>
+      <textarea id="rp-${i}" style="min-height:110px;font-size:13px;line-height:1.65">${esc(r.prompt)}</textarea>
+    </div>`).join("");
+}
+async function saveRules() {
+  const rules = [0,1,2].map(i=>({ badge:DEFAULT_RULES[i].badge, cls:DEFAULT_RULES[i].cls, name:document.getElementById("rn-"+i).value, prompt:document.getElementById("rp-"+i).value }));
+  STATE.rules = rules;
+  await api({ action:"saveRules", rules });
+  flash("rules-save-status");
+}
+async function resetRules() {
+  if(!confirm("Reset về 3 rule mặc định?")) return;
+  STATE.rules = JSON.parse(JSON.stringify(DEFAULT_RULES));
+  await api({ action:"saveRules", rules:STATE.rules });
+  renderRulesEditor();
+}
+
+// ══ SHEET CONFIG ══════════════════════════════════════════════
+async function loadSheetConfig() {
+  const res = await api({ action:"getSheetConfig" });
+  if (res.ok) {
+    STATE.sheetConfig = res;
+    document.getElementById("sheet-id-input").value = res.sheetId || "";
+    document.getElementById("sheet-script-url").value = res.scriptUrl || "";
+    setToggle(res.sheetEnabled);
+  }
+}
+function setToggle(on) {
+  const t = document.getElementById("sheet-toggle");
+  t.classList.toggle("on", !!on);
+  document.getElementById("sheet-toggle-sub").textContent = on ? "Đang bật — tự động ghi mỗi lần tạo" : "Đang tắt";
+}
+function toggleSheet() {
+  const t = document.getElementById("sheet-toggle");
+  const newState = !t.classList.contains("on");
+  setToggle(newState);
+  const sid = document.getElementById("sheet-id-input").value.trim();
+  const surl = document.getElementById("sheet-script-url").value.trim();
+  api({ action:"setSheetConfig", sheetId:sid, scriptUrl:surl, enabled:newState });
+}
+async function saveSheetConfig() {
+  const sheetId = document.getElementById("sheet-id-input").value.trim();
+  const scriptUrl = document.getElementById("sheet-script-url").value.trim();
+  const enabled = document.getElementById("sheet-toggle").classList.contains("on");
+  await api({ action:"setSheetConfig", sheetId, scriptUrl, enabled });
+  STATE.sheetConfig = { sheetId, scriptUrl, sheetEnabled: enabled };
+  flash("sheet-save-status");
+}
+
+// ══ AUTO-CAPTION ══════════════════════════════════════════════
+async function runCaption() {
+  const link = document.getElementById("drive-link").value.trim();
+  if (!link) { alert("Nhập Drive link trước"); return; }
+
+  const btn = document.getElementById("caption-btn");
+  btn.disabled = true; btn.textContent = "⏳ Đang đọc ảnh...";
+  setProgress("gen", 30, "🔍 Gemini Vision đang phân tích ảnh...");
+
+  try {
+    const fileId = extractFileId(link);
+    let caption = "";
+
+    if (fileId) {
+      // Use Gemini with file URL
+      const imageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      caption = await geminiCaption(imageUrl, link);
+    } else {
+      caption = await geminiCaption(null, link);
+    }
+
+    STATE.captionText = caption;
+    document.getElementById("caption-text").textContent = caption;
+    document.getElementById("caption-area").style.display = "block";
+    document.getElementById("media-desc").value = caption;
+    document.getElementById("desc-area").style.display = "none";
+    STATE.editingDesc = false;
+    setProgress("gen", 100, "✅ Auto-caption xong!");
+    setTimeout(()=>hideProgress("gen"), 800);
+  } catch(e) {
+    setProgress("gen", 100, "⚠ Không thể đọc ảnh — nhập mô tả thủ công");
+    document.getElementById("caption-area").style.display = "none";
+    document.getElementById("desc-area").style.display = "block";
+    setTimeout(()=>hideProgress("gen"), 1500);
+  }
+  btn.disabled = false; btn.textContent = "🔍 Auto-caption ảnh";
+}
+
+function toggleEditDesc() {
+  STATE.editingDesc = !STATE.editingDesc;
+  const descArea = document.getElementById("desc-area");
+  descArea.style.display = STATE.editingDesc ? "block" : "none";
+  document.getElementById("edit-desc-btn").textContent = STATE.editingDesc ? "✓ Đóng chỉnh sửa" : "✏ Sửa mô tả";
+  if (STATE.editingDesc) document.getElementById("media-desc").value = STATE.captionText;
+}
+
+async function geminiCaption(imageUrl, driveLink) {
+  const prompt = `Bạn đang xem ảnh/video nha khoa (niềng răng). Hãy mô tả ngắn gọn bằng tiếng Việt (3-5 câu) những gì bạn thấy: loại ảnh (before/after/testimonial/clinic/sản phẩm), đặc điểm nổi bật, có thể dùng gì để viết content quảng cáo. Nếu là before/after thì mô tả sự thay đổi. Không bịa đặt thông tin không có trong ảnh. Drive link: ${driveLink}`;
+
+  const parts = [{ text: prompt }];
+  if (imageUrl) {
+    // Fetch image and convert to base64
+    try {
+      const imgResp = await fetch(imageUrl);
+      const blob = await imgResp.blob();
+      const b64 = await blobToBase64(blob);
+      const mimeType = blob.type || "image/jpeg";
+      parts.unshift({ inline_data: { mime_type: mimeType, data: b64.split(",")[1] } });
+    } catch(e) {}
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+  const body = { contents:[{ role:"user", parts }], generationConfig:{ temperature:0.4, maxOutputTokens:400 } };
+  const resp = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+  const data = await resp.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+}
+
+function blobToBase64(blob) {
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+
+function extractFileId(url) {
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+  return m ? m[1] : null;
+}
+
+// ══ CONTENT GENERATION ════════════════════════════════════════
+async function runGeneration() {
+  const driveLink = document.getElementById("drive-link").value.trim();
+  const mediaDesc = STATE.editingDesc
+    ? document.getElementById("media-desc").value.trim()
+    : (STATE.captionText || document.getElementById("media-desc").value.trim());
+
+  if (!driveLink && !mediaDesc) { alert("Nhập Drive link hoặc mô tả media"); return; }
+
+  const btn = document.getElementById("gen-btn");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Đang tạo...';
+  document.getElementById("output-area").style.display = "none";
+  document.getElementById("gen-alert").innerHTML = "";
+
+  const SYS = `Bạn là chuyên gia viết content Facebook Ads cho Nha khoa, chuyên về Niềng răng tại Việt Nam. Chỉ xuất content quảng cáo, không thêm tiêu đề, nhãn, hay giải thích thêm.`;
+  const mediaCtx = [driveLink?`Drive link: ${driveLink}`:"", mediaDesc?`Mô tả media: ${mediaDesc}`:""].filter(Boolean).join("\n");
+
+  const contents = [];
+  for (let i = 0; i < 3; i++) {
+    setProgress("gen", 15 + i*27, `✍️ Viết content theo ${STATE.rules[i].name}...`);
+    try {
+      const t = await callGemini(SYS, `${mediaCtx}\n\nNHIỆM VỤ:\n${STATE.rules[i].prompt}\n\nViết content ngay, không thêm tiêu đề hay label:`);
+      contents.push(t.trim());
+    } catch(e) { contents.push(`[Lỗi: ${e.message}]`); }
+  }
+
+  STATE.lastContents = contents;
+  setProgress("gen", 92, "📊 Đang lưu...");
+
+  // Log to backend
+  const logRes = await api({ action:"logContent", data:{ driveLink, mediaDesc, content1:contents[0], content2:contents[1], content3:contents[2] } });
+
+  setProgress("gen", 100, "✅ Hoàn thành!");
+  setTimeout(()=>{ hideProgress("gen"); renderOutputs(contents, logRes); btn.disabled=false; btn.innerHTML="✦ Tạo 3 content"; }, 400);
+}
+
+async function callGemini(system, user) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+  const body = { contents:[{role:"user",parts:[{text:system+"\n\n---\n\n"+user}]}], generationConfig:{temperature:0.85,maxOutputTokens:900} };
+  const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||"Gemini error "+r.status);}
+  const d = await r.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||"";
+}
+
+function renderOutputs(contents, logRes) {
+  document.getElementById("outputs").innerHTML = contents.map((c,i)=>`
+    <div class="out-card">
+      <div class="out-header">
+        <span class="badge ${STATE.rules[i].cls}">${STATE.rules[i].badge} — ${esc(STATE.rules[i].name)}</span>
+        <button class="btn btn-sm" style="background:var(--gray-100);border:none;cursor:pointer" onclick="copyOne(${i})">Copy</button>
+      </div>
+      <div class="out-text">${esc(c)}</div>
+    </div>`).join("");
+
+  const alertEl = document.getElementById("gen-alert");
+  if (logRes && logRes.ok) alertEl.innerHTML = `<div class="alert alert-ok">✅ Đã lưu vào lịch sử</div>`;
+  document.getElementById("output-area").style.display = "block";
+}
+
+function copyOne(i) {
+  navigator.clipboard.writeText(STATE.lastContents[i]).then(()=>{
+    const btns = document.querySelectorAll(".out-card .btn-sm");
+    btns[i].textContent="✓ Copied"; setTimeout(()=>btns[i].textContent="Copy",1500);
+  });
+}
+function copyAll() {
+  const text = STATE.rules.map((r,i)=>`【${r.badge} — ${r.name}】\n${STATE.lastContents[i]}`).join("\n\n────────────\n\n");
+  navigator.clipboard.writeText(text);
+}
+
+// ══ HISTORY ══════════════════════════════════════════════════
+async function loadHistory() {
+  const res = await api({ action:"getMyLogs" });
+  const el = document.getElementById("history-list");
+  if (!res.ok || !res.logs || res.logs.length===0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Chưa có lịch sử</div></div>`;
+    return;
+  }
+  el.innerHTML = res.logs.map(l=>`
+    <div class="log-item">
+      <div class="log-meta">
+        <span class="log-time">${formatDate(l.createdAt)}</span>
+        ${l.driveLink?`<a class="log-link" href="${l.driveLink}" target="_blank">Xem media ↗</a>`:""}
+      </div>
+      <div class="log-desc">${esc(l.mediaDesc||"(không có mô tả)")}</div>
+    </div>`).join("");
+}
+
+// ══ ADMIN ════════════════════════════════════════════════════
+async function loadPendingBadge() {
+  const res = await api({ action:"getPendingUsers" });
+  if (res.ok && res.users && res.users.length > 0) {
+    document.getElementById("pending-dot").style.display = "inline-block";
+  }
+}
+
+async function loadAdminUsers() {
+  const [pendRes, allRes] = await Promise.all([
+    api({ action:"getPendingUsers" }),
+    api({ action:"getAllUsers" })
+  ]);
+
+  // Pending
+  if (pendRes.ok && pendRes.users.length > 0) {
+    document.getElementById("pending-card").style.display = "block";
+    document.getElementById("pending-count").textContent = pendRes.users.length;
+    document.getElementById("pending-list").innerHTML = pendRes.users.map(u=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--gray-100)">
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:600">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--gray-400)">${esc(u.email)}</div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-sm btn-success" onclick="approveUser('${esc(u.email)}',this)">✓ Duyệt</button>
+          <button class="btn btn-sm btn-danger" onclick="rejectUser('${esc(u.email)}',this)">✕ Từ chối</button>
+        </div>
+      </div>`).join("");
+  } else {
+    document.getElementById("pending-card").style.display = "none";
+  }
+
+  // All users
+  if (allRes.ok) {
+    const rows = allRes.users.map(u=>`
+      <tr>
+        <td>
+          <div style="font-weight:500">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--gray-400)">${esc(u.email)}</div>
+        </td>
+        <td><span class="status-pill s-${u.status}">${statusLabel(u.status)}</span></td>
+        <td>${u.sheetEnabled?'<span style="color:var(--green);font-size:12px">🟢 Bật</span>':'<span style="color:var(--gray-400);font-size:12px">⚫ Tắt</span>'}</td>
+        <td style="font-size:12px;color:var(--gray-400)">${formatDate(u.lastLogin)}</td>
+        <td>
+          ${u.status==="approved"?`<button class="btn btn-sm btn-danger" onclick="disableUser('${esc(u.email)}',this)">Vô hiệu</button>`:""}
+          ${u.status==="disabled"?`<button class="btn btn-sm btn-success" onclick="enableUser('${esc(u.email)}',this)">Kích hoạt</button>`:""}
+        </td>
+      </tr>`).join("");
+    document.getElementById("all-users-list").innerHTML = `
+      <table class="user-table">
+        <thead><tr><th>Người dùng</th><th>Trạng thái</th><th>Sheet</th><th>Đăng nhập cuối</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+}
+
+async function approveUser(email, btn) {
+  btn.disabled=true;
+  await api({ action:"approveUser", targetEmail:email });
+  document.getElementById("pending-dot").style.display="none";
+  loadAdminUsers();
+}
+async function rejectUser(email, btn) {
+  btn.disabled=true;
+  await api({ action:"rejectUser", targetEmail:email });
+  loadAdminUsers();
+}
+async function disableUser(email, btn) {
+  if(!confirm("Vô hiệu hóa tài khoản này?")) return;
+  btn.disabled=true;
+  await api({ action:"toggleUserAccess", targetEmail:email, enabled:false });
+  loadAdminUsers();
+}
+async function enableUser(email, btn) {
+  btn.disabled=true;
+  await api({ action:"toggleUserAccess", targetEmail:email, enabled:true });
+  loadAdminUsers();
+}
+
+// ══ API HELPER ════════════════════════════════════════════════
+async function api(body) {
+  try {
+    const resp = await fetch(API_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ ...body, token:STATE.token })
+    });
+    return await resp.json();
+  } catch(e) { return { ok:false, error:e.message }; }
+}
+
+// ══ UTILS ════════════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(name+"-screen").classList.add("active");
+}
+function toggleDropdown() { document.getElementById("user-menu").classList.toggle("open"); }
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function parseJwt(token){const p=token.split(".")[1];return JSON.parse(atob(p.replace(/-/g,"+").replace(/_/g,"/")));}
+function formatDate(d){if(!d)return"—";try{return new Date(d).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){return d;}}
+function statusLabel(s){return{approved:"Hoạt động",pending:"Chờ duyệt",rejected:"Từ chối",disabled:"Vô hiệu"}[s]||s;}
+function flash(id){const el=document.getElementById(id);el.style.display="inline";setTimeout(()=>el.style.display="none",2000);}
+function setProgress(id,pct,msg){document.getElementById(id+"-progress").style.display="block";document.getElementById(id+"-fill").style.width=pct+"%";document.getElementById(id+"-msg").textContent=msg;}
+function hideProgress(id){document.getElementById(id+"-progress").style.display="none";}
+</script>
+</body>
+</html>
