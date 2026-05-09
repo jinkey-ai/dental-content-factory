@@ -356,7 +356,7 @@
 <script>
 // ══ CONFIG ════════════════════════════════════════════════════
 const GOOGLE_CLIENT_ID = "1045491840462-d72hd2pkj1svafm7ksog9i9ejudmddag.apps.googleusercontent.com"; // Thay bằng Client ID thật
-const API_URL = "https://script.google.com/macros/s/AKfycbyJPamOZxEw82FgEhNs3Vqy0XNM35HXuf7ndXhdC31CTTHH7ge1K-pLj1I_srB2M7_mMA/exec"; // Thay bằng Apps Script Web App URL
+const API_URL = "https://script.google.com/macros/s/AKfycbxC1x2iWBGW7eELT7-_NvohI7dALGNk5h61l3wFnPf0kTfOZMgjLW36yDSp7GeSpgYrOg/exec"; // Thay bằng Apps Script Web App URL
 const GEMINI_KEY = "AIzaSyBbzIL0cb5byh9Dd9HAv9vZ--gVxDKm_vk"; // Thay bằng Gemini API Key
 
 const DEFAULT_RULES = [
@@ -791,9 +791,11 @@ async function enableUser(email, btn) {
 // ══ API HELPER ════════════════════════════════════════════════
 async function api(body) {
   try {
+    const params = new URLSearchParams();
+    params.append("payload", JSON.stringify({ ...body, token:STATE.token }));
     const resp = await fetch(API_URL, {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ ...body, token:STATE.token })
+      method:"POST",
+      body: params
     });
     return await resp.json();
   } catch(e) { return { ok:false, error:e.message }; }
